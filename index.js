@@ -1,8 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require("dotenv").config();
-const { MongoClient } = require('mongodb');
-const ObjectId = require("mongodb").ObjectId;
+const { MongoClient, ObjectId } = require('mongodb');
 
 // Ports
 const port = process.env.PORT || 5000;
@@ -10,10 +9,8 @@ const app = express();
 
 
 // Middleware.
-app.use(cors({
-    methods: ["GET", "POST", "PUT", "DELETE"]
-}));
-app.use(express.json({ limit: '50mb' }));
+app.use(cors());
+app.use(express.json());
 
 
 // MongoDB Server Code.
@@ -98,24 +95,40 @@ async function run() {
 
 
         // Update Product.
-        app.put('/up-product/:id', async (req, res) => {
+        app.patch('/update/product/:id', async (req, res) => {
             const id = req.params.id;
             const product = req.body;
-            const ImageData = product.image;
-            const encodedData = ImageData.toString("base64");
-            const imageBuffer = Buffer.from(encodedData, "base64");
-            product.image = imageBuffer;
             const price = parseInt(product.price);
             const originalPrice = parseInt(product.originalPrice);
             const quantity = parseInt(product.quantity);
             product.price = price;
             product.originalPrice = originalPrice;
             product.quantity = quantity;
+            product.discount = (originalPrice - price) / originalPrice * 100;
             product.updatedAt = new Date().toISOString();
-            const filter = { _id: ObjectId(id) };
-            const options = { upsert: true };
-            const updateDoc = { $set: product };
-            const result = await productsCollection.updateOne(filter, updateDoc, options);
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    price: product.price,
+                    discount: product.discount,
+                    tag: product.tag,
+                    flashSale: product.flashSale,
+                    children: product.children,
+                    description: product.description,
+                    image: product.image,
+                    thumb: product.thumb,
+                    originalPrice: product.originalPrice,
+                    parent: product.parent,
+                    quantity: product.quantity,
+                    slug: product.slug,
+                    title: product.title,
+                    type: product.type,
+                    unit: product.unit,
+                    updatedAt: product.updatedAt,
+                    sku: product.sku
+                }
+            };
+            const result = await productsCollection.updateOne(filter, updateDoc);
             res.json(result);
         });
 
