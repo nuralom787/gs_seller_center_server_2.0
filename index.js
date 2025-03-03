@@ -134,20 +134,25 @@ async function run() {
 
 
         // Update Product Status.
-        app.put('/up-product-status/:id', async (req, res) => {
+        app.patch('/update/product-status/:id', async (req, res) => {
             const id = req.params.id;
-            const product = req.body;
-            delete product._id;
-            if (product.status === "Show") {
-                product.status = "Hide";
+            const currentStatus = req.body;
+            if (currentStatus.status === "Show") {
+                currentStatus.status = "Hide";
             } else {
-                product.status = "Show";
+                currentStatus.status = "Show";
             }
-            product.updatedAt = new Date().toISOString();
-            const filter = { _id: ObjectId(id) };
-            const options = { upsert: true };
-            const updateDoc = { $set: product };
-            const result = await productsCollection.updateOne(filter, updateDoc, options);
+            const updatedAt = new Date().toISOString();
+
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    status: currentStatus.status,
+                    updatedAt: updatedAt
+                }
+            };
+
+            const result = await productsCollection.updateOne(filter, updateDoc);
             res.json(result);
         });
 
