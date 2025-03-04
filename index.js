@@ -41,20 +41,17 @@ async function run() {
 
         // Get All Products API.
         app.get('/products', async (req, res) => {
-            // const page = req.query.page;
-            // const category = req.query.category;
-            // const size = parseInt(req.query.size);
-            // let products;
-            // if (page && category) {
-            //     const filter = { parent: category };
-            //     products = await productsCollection.find(filter).skip(page * size).limit(size).toArray();
-            // } else if (page) {
-            //     products = await productsCollection.find({}).skip(page * size).limit(size).toArray();
-            // } else {
-            // }
-            const products = await productsCollection.find({}).toArray();
+            const size = parseInt(req.query.size);
+            const page = parseInt(req.query.page);
+            let products;
+            if (page || size) {
+                products = await productsCollection.find().skip(page * size).limit(size).toArray();
+            }
+            else {
+                products = await productsCollection.find().toArray();
+            }
             const count = await productsCollection.countDocuments();
-            res.json({
+            res.send({
                 count,
                 products,
             });
@@ -71,26 +68,22 @@ async function run() {
 
 
         // Add/Post New Products.
-        app.post('/add-product', async (req, res) => {
+        app.post('/add-new/product', async (req, res) => {
             const product = req.body;
-            const ImageData = product.image;
-            const encodedData = ImageData.toString("base64");
-            const imageBuffer = Buffer.from(encodedData, "base64");
-            const discount = parseInt("0");
+
             const price = parseInt(product.price);
             const originalPrice = parseInt(product.originalPrice);
             const quantity = parseInt(product.quantity);
-            product.image = imageBuffer;
-            product.discount = discount;
             product.price = price;
             product.originalPrice = originalPrice;
             product.quantity = quantity;
-            product.flashSale = false;
+            product.discount = (originalPrice - price) / originalPrice * 100;
+
             product.status = "Show";
             product.createdAt = new Date().toISOString();
             product.updatedAt = new Date().toISOString();
             const result = await productsCollection.insertOne(product);
-            res.json(result);
+            res.send(result);
         });
 
 
@@ -158,11 +151,11 @@ async function run() {
 
 
         // Delete Product.
-        app.delete('/delete-product/:id', async (req, res) => {
+        app.delete('/product/delete/:id', async (req, res) => {
             const id = req.params.id;
-            const query = { _id: ObjectId(id) };
+            const query = { _id: new ObjectId(id) };
             const result = await productsCollection.deleteOne(query);
-            res.json(result);
+            res.send(result);
         });
 
 
