@@ -43,6 +43,9 @@ async function run() {
         app.get('/products', async (req, res) => {
             const size = parseInt(req.query.size);
             const page = parseInt(req.query.page);
+            const title = req.query.title;
+            const category = req.query.category;
+            const price = req.query.price;
             let products;
             if (page || size) {
                 products = await productsCollection.find().skip(page * size).limit(size).toArray();
@@ -61,9 +64,9 @@ async function run() {
         // Get Specific Product.
         app.get('/product/:id', async (req, res) => {
             const id = req.params.id;
-            const query = { _id: ObjectId(id) };
+            const query = { _id: new ObjectId(id) };
             const result = await productsCollection.findOne(query);
-            res.json(result);
+            res.send(result);
         });
 
 
