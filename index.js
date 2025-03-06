@@ -307,20 +307,33 @@ async function run() {
         // Get All Categories API.
         app.get('/categories', async (req, res) => {
             const page = req.query.page;
-            const category = req.query.category;
             const size = parseInt(req.query.size);
+            const search = req.query.search;
+            // const category = req.query.category;
             let categories;
-            if (page && category) {
-                const filter = { parent: category };
+            let count;
+
+            if (page && search) {
+                const filter = {
+                    parent: {
+                        $regex: search,
+                        $options: 'i'
+                    }
+                };
                 categories = await categoriesCollection.find(filter).skip(page * size).limit(size).toArray();
-            } else if (page) {
+                count = categories.length;
+            }
+            else if (page) {
                 categories = await categoriesCollection.find({}).skip(page * size).limit(size).toArray();
+                count = await categoriesCollection.estimatedDocumentCount();
             }
             else {
                 categories = await categoriesCollection.find({}).toArray();
+                count = categories.length;
             }
-            const count = await categoriesCollection.countDocuments();
-            res.json({
+            const totalCount = await categoriesCollection.estimatedDocumentCount();
+            res.send({
+                totalCount,
                 count,
                 categories,
             });
@@ -337,14 +350,11 @@ async function run() {
 
 
         // Post New Categories API.
-        app.post('/add-category', async (req, res) => {
+        app.post('/add-new/category', async (req, res) => {
             const category = req.body;
-            const ImageData = category.icon;
-            const encodedData = ImageData?.toString("base64");
-            const imageBuffer = Buffer.from(encodedData ? encodedData : "", "base64");
-            category.icon = imageBuffer;
+            // console.log(category);
             const result = await categoriesCollection.insertOne(category);
-            res.json(result);
+            res.send(result);
         });
 
 
@@ -365,29 +375,33 @@ async function run() {
 
 
         // Update Category Status.
-        app.put('/up-category-status/:id', async (req, res) => {
+        app.patch('/update/category-status/:id', async (req, res) => {
             const id = req.params.id;
-            const category = req.body;
-            delete category._id;
-            if (category.status === "Show") {
-                category.status = "Hide";
+            const currentStatus = req.body;
+            if (currentStatus.status === "Show") {
+                currentStatus.status = "Hide";
             } else {
-                category.status = "Show";
+                currentStatus.status = "Show";
             }
-            const filter = { _id: ObjectId(id) };
-            const options = { upsert: true };
-            const updateDoc = { $set: category };
-            const result = await categoriesCollection.updateOne(filter, updateDoc, options);
-            res.json(result);
+
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    status: currentStatus.status
+                }
+            };
+
+            const result = await categoriesCollection.updateOne(filter, updateDoc);
+            res.send(result);
         });
 
 
         // Delete Category.
-        app.delete('/delete-cat/:id', async (req, res) => {
+        app.delete('/category/delete/:id', async (req, res) => {
             const id = req.params.id;
-            const query = { _id: ObjectId(id) };
+            const query = { _id: new ObjectId(id) };
             const result = await categoriesCollection.deleteOne(query);
-            res.json(result);
+            res.send(result);
         });
 
 
