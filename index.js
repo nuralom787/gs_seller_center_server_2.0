@@ -46,15 +46,36 @@ async function run() {
             const title = req.query.title;
             const category = req.query.category;
             const price = req.query.price;
+
+            let count;
             let products;
             if (page || size) {
-                products = await productsCollection.find().skip(page * size).limit(size).toArray();
+                const filter = {
+                    ...(title && { title: { $regex: title, $options: 'i' } }),
+                    ...(category && { parent: { $regex: category, $options: 'i' } })
+                }
+
+                if (price === 'asc' || price === 'desc') {
+                    const sortValue = price === "asc" ? 1 : -1;
+                    products = await productsCollection.find(filter).skip(page * size).limit(size).sort({ price: sortValue }).toArray();
+                    const productLimit = await productsCollection.find(filter).toArray();
+                    count = productLimit.length;
+                }
+                else {
+                    products = await productsCollection.find(filter).skip(page * size).limit(size).toArray();
+                    const productLimit = await productsCollection.find(filter).toArray();
+                    count = productLimit.length;
+                }
             }
             else {
                 products = await productsCollection.find().toArray();
+                count = await productsCollection.estimatedDocumentCount();
             }
-            const count = await productsCollection.countDocuments();
+
+            const totalCount = await productsCollection.estimatedDocumentCount();
+
             res.send({
+                totalCount,
                 count,
                 products,
             });
