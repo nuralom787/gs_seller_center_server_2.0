@@ -26,7 +26,7 @@ async function run() {
         const database = client.db('GS_Shop');
         const productsCollection = database.collection('products');
         const ordersCollection = database.collection('orders');
-        const usersCollection = database.collection('users');
+        const customersCollection = database.collection('customers');
         const categoriesCollection = database.collection('categories');
         const couponsCollection = database.collection('coupons');
         const staffsCollection = database.collection('staffs');
@@ -264,57 +264,81 @@ async function run() {
 
 
 
-        // Get All User.
-        app.get('/users', async (req, res) => {
+        // Get All Customers.
+        app.get('/customers', async (req, res) => {
             const page = req.query.page;
             const size = parseInt(req.query.size);
-            let users;
+            const search = req.query.search;
+
+            let customers;
+            let count;
             if (page) {
-                users = await usersCollection.find({}).skip(page * size).limit(size).toArray();
-            } else {
-                users = await usersCollection.find({}).toArray();
+                const filter = {
+                    $or: [
+                        { displayName: { $regex: search, $options: 'i' } },
+                        { email: { $regex: search, $options: 'i' } },
+                        { phoneNumber: { $regex: search, $options: 'i' } }
+                    ]
+                };
+                customers = await customersCollection.find(filter).skip(page * size).limit(size).toArray();
+                const customersLimit = await customersCollection.find(filter).toArray();
+                count = customersLimit.length;
             }
-            const count = await usersCollection.countDocuments();
-            res.json({
+            else {
+                const filter = {
+                    $or: [
+                        { displayName: { $regex: search, $options: 'i' } },
+                        { email: { $regex: search, $options: 'i' } },
+                        { phoneNumber: { $regex: search, $options: 'i' } }
+                    ]
+                };
+                customers = await customersCollection.find(filter).toArray();
+                count = customers.length;
+            }
+
+            const totalCount = await customersCollection.estimatedDocumentCount();
+
+            res.send({
+                totalCount,
                 count,
-                users,
+                customers,
             });
         });
 
 
         // Get Specific Product.
-        app.get('/users/:id', async (req, res) => {
+        app.get('/customers/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
-            const result = await usersCollection.findOne(query);
+            const result = await customersCollection.findOne(query);
             res.json(result);
         });
 
 
         // Post New Users.
-        app.post('/add/users', async (req, res) => {
+        app.post('/add/customers', async (req, res) => {
             const newData = req.body;
-            const result = await usersCollection.insertOne(newData);
+            const result = await customersCollection.insertOne(newData);
             res.json(result);
         });
 
 
         // Upsert Users.
-        app.put('/add/users', async (req, res) => {
+        app.put('/add/customers', async (req, res) => {
             const user = req.body;
             const filter = { email: user.email };
             const options = { upsert: true };
             const updateDoc = { $set: user };
-            const result = await usersCollection.updateOne(filter, updateDoc, options);
+            const result = await customersCollection.updateOne(filter, updateDoc, options);
             res.json(result);
         });
 
 
-        // Delete Users.
+        // Delete customers.
         app.delete('/delete-user/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
-            const result = await usersCollection.deleteOne(query);
+            const result = await customersCollection.deleteOne(query);
             res.json(result);
         });
 
