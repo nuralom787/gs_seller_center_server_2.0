@@ -309,9 +309,9 @@ async function run() {
         // Get Specific Product.
         app.get('/customers/:id', async (req, res) => {
             const id = req.params.id;
-            const query = { _id: ObjectId(id) };
+            const query = { _id: new ObjectId(id) };
             const result = await customersCollection.findOne(query);
-            res.json(result);
+            res.send(result);
         });
 
 
@@ -335,11 +335,12 @@ async function run() {
 
 
         // Delete customers.
-        app.delete('/delete-user/:id', async (req, res) => {
+        app.delete('/customer/delete/:id', async (req, res) => {
             const id = req.params.id;
-            const query = { _id: ObjectId(id) };
+            console.log(id)
+            const query = { _id: new ObjectId(id) };
             const result = await customersCollection.deleteOne(query);
-            res.json(result);
+            res.send(result);
         });
 
 
