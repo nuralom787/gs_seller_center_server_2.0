@@ -258,9 +258,9 @@ async function run() {
 
 
 
-        /*-----------------------------
-                // User API
-        -----------------------------*/
+        /*---------------------------------------------------------
+        //                  Customers/User API
+        ---------------------------------------------------------*/
 
 
 
@@ -319,9 +319,14 @@ async function run() {
         });
 
 
-        /*--------------------------------------
-                // Categories API.
-        --------------------------------------*/
+
+
+
+        /*---------------------------------------------------------
+        //                      Categories API.
+        ---------------------------------------------------------*/
+
+
 
 
 
@@ -364,9 +369,9 @@ async function run() {
         // Get Specific Category.
         app.get('/category/:id', async (req, res) => {
             const id = req.params.id;
-            const query = { _id: ObjectId(id) };
+            const query = { _id: new ObjectId(id) };
             const result = await categoriesCollection.findOne(query);
-            res.json(result);
+            res.send(result);
         });
 
 
@@ -380,18 +385,24 @@ async function run() {
 
 
         // Update Category.
-        app.put('/up-category/:id', async (req, res) => {
+        app.patch('/update/category/:id', async (req, res) => {
             const id = req.params.id;
             const category = req.body;
-            const ImageData = category.icon;
-            const encodedData = ImageData.toString("base64");
-            const imageBuffer = Buffer.from(encodedData, "base64");
-            category.icon = imageBuffer;
-            const filter = { _id: ObjectId(id) };
-            const options = { upsert: true };
-            const updateDoc = { $set: category };
-            const result = await categoriesCollection.updateOne(filter, updateDoc, options);
-            res.json(result);
+
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    children: category.children,
+                    status: category.status,
+                    parent: category.parent,
+                    type: category.type,
+                    icon: category.icon,
+                    thumb: category.thumb ? category.thumb : null
+                }
+            };
+
+            const result = await categoriesCollection.updateOne(filter, updateDoc);
+            res.send(result);
         });
 
 
