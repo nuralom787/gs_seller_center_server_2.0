@@ -184,9 +184,9 @@ async function run() {
 
 
 
-        /*---------------------------------------------
-                // Orders API
-        ---------------------------------------------*/
+        /*---------------------------------------------------------
+        //                      Orders API
+        ---------------------------------------------------------*/
 
 
 
@@ -194,14 +194,27 @@ async function run() {
         app.get('/orders', async (req, res) => {
             const page = req.query.page;
             const size = parseInt(req.query.size);
+            const email = req.query.email;
+
             let orders;
+            let count;
+
             if (page) {
-                orders = await ordersCollection.find({}).skip(page * size).limit(size).toArray();
+                const filter = {
+                    ...(email && { email: { $regex: email, $options: 'i' } })
+                }
+                orders = await ordersCollection.find(filter).skip(page * size).limit(size).toArray();
+                const ordersLimit = await ordersCollection.find(filter).toArray();
+                count = ordersLimit.length;
             } else {
                 orders = await ordersCollection.find({}).toArray();
+                count = await ordersCollection.estimatedDocumentCount();
             }
-            const count = await ordersCollection.countDocuments();
-            res.json({
+
+            const totalCount = await ordersCollection.estimatedDocumentCount();
+
+            res.send({
+                totalCount,
                 count,
                 orders,
             });
@@ -210,8 +223,8 @@ async function run() {
 
         // Get Single Order.
         app.get('/order/user', async (req, res) => {
-            const page = req.query.page;
-            const size = parseInt(req.query.size);
+            // const page = req.query.page;
+            // const size = parseInt(req.query.size);
             const email = req.query.email;
             const query = { email: email };
             let orders;
@@ -243,17 +256,19 @@ async function run() {
 
 
         // Update Order Status.
-        app.put('/up-order/:id', async (req, res) => {
+        app.patch('/update/order-status/:id', async (req, res) => {
             const id = req.params.id;
-            const status = req.query.status;
-            const order = req.body;
-            order.status = status;
-            delete order._id;
-            const filter = { _id: ObjectId(id) };
-            const options = { upsert: true };
-            const updateDoc = { $set: order };
-            const result = await ordersCollection.updateOne(filter, updateDoc, options);
-            res.json(result);
+            const currentStatus = req.body;
+
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    status: currentStatus.status
+                }
+            };
+
+            const result = await ordersCollection.updateOne(filter, updateDoc);
+            res.send(result);
         });
 
 
