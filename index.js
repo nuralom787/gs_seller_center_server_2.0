@@ -249,9 +249,9 @@ async function run() {
         // Get Order For Invoice.
         app.get('/order/:id', async (req, res) => {
             const id = req.params.id;
-            const query = { _id: ObjectId(id) };
+            const query = { _id: new ObjectId(id) };
             const result = await ordersCollection.findOne(query);
-            res.json(result);
+            res.send(result);
         });
 
 
