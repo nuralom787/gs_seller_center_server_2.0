@@ -195,19 +195,28 @@ async function run() {
             const page = req.query.page;
             const size = parseInt(req.query.size);
             const email = req.query.email;
+            const search = req.query.search;
+            const status = req.query.status;
+            const date = parseInt(req.query.date);
+
+            const currentDate = new Date();
+            currentDate.setDate(currentDate.getDate() - date);
 
             let orders;
             let count;
 
             if (page) {
                 const filter = {
+                    ...(search && { displayName: { $regex: search, $options: 'i' } }),
+                    ...(status && { status: { $regex: status, $options: 'i' } }),
+                    ...(date && { orderTime: { $gte: currentDate } }),
                     ...(email && { email: { $regex: email, $options: 'i' } })
                 }
-                orders = await ordersCollection.find(filter).skip(page * size).limit(size).toArray();
+                orders = await ordersCollection.find(filter).sort({ orderTime: -1 }).skip(page * size).limit(size).toArray();
                 const ordersLimit = await ordersCollection.find(filter).toArray();
                 count = ordersLimit.length;
             } else {
-                orders = await ordersCollection.find({}).toArray();
+                orders = await ordersCollection.find({}).sort({ orderTime: -1 }).toArray();
                 count = await ordersCollection.estimatedDocumentCount();
             }
 
