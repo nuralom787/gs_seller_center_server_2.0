@@ -487,9 +487,9 @@ async function run() {
 
 
 
-        /*--------------------------------
-                // Coupon API.
-        --------------------------------*/
+        /*--------------------------------------------------------------
+        //                      Coupons API.
+        --------------------------------------------------------------*/
 
 
 
@@ -498,13 +498,16 @@ async function run() {
             const page = req.query.page;
             const size = parseInt(req.query.size);
             let coupons;
+
             if (page) {
                 coupons = await couponsCollection.find({}).skip(page * size).limit(size).toArray();
             } else {
                 coupons = await couponsCollection.find({}).toArray();
             }
-            const count = await couponsCollection.countDocuments();
-            res.json({
+
+            const count = await couponsCollection.estimatedDocumentCount();
+
+            res.send({
                 count,
                 coupons,
             });
@@ -514,9 +517,9 @@ async function run() {
         // Get a Specific Coupon.
         app.get('/coupon/:id', async (req, res) => {
             const id = req.params.id;
-            const query = { _id: ObjectId(id) };
+            const query = { _id: new ObjectId(id) };
             const result = await couponsCollection.findOne(query);
-            res.json(result);
+            res.send(result);
         });
 
 
@@ -540,23 +543,36 @@ async function run() {
 
 
         // Update Coupons.
-        app.put('/up-coupon/:id', async (req, res) => {
+        app.patch('/update/coupon/:id', async (req, res) => {
             const id = req.params.id;
             const data = req.body;
-            const filter = { _id: ObjectId(id) };
-            const options = { upsert: true };
-            const updateDoc = { $set: data };
-            const result = await couponsCollection.updateOne(filter, updateDoc, options);
-            res.json(result);
+
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    logo: data.logo,
+                    thumb: data.thumb,
+                    title: data.title,
+                    minimumAmount: data.minimumAmount,
+                    discountPercentage: data.discountPercentage,
+                    productType: data.productType,
+                    couponCode: data.couponCode,
+                    endTime: data.endTime,
+                    updatedAt: new Date().toISOString()
+                }
+            };
+
+            const result = await couponsCollection.updateOne(filter, updateDoc);
+            res.send(result);
         });
 
 
         // Delete coupons.
-        app.delete('/delete-coupon/:id', async (req, res) => {
+        app.delete('/coupon/delete/:id', async (req, res) => {
             const id = req.params.id;
-            const query = { _id: ObjectId(id) };
+            const query = { _id: new ObjectId(id) };
             const result = await couponsCollection.deleteOne(query);
-            res.json(result);
+            res.send(result);
         });
 
 
