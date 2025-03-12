@@ -590,21 +590,50 @@ async function run() {
 
         // Get All Staffs.
         app.get('/staffs', async (req, res) => {
-            const email = req.query.email;
             const page = req.query.page;
             const size = parseInt(req.query.size);
+            const email = req.query.email;
+            const search = req.query.search;
+            const role = req.query.role;
+
             let staffs;
+            let count;
             if (page) {
-                staffs = await staffsCollection.find({}).skip(page * size).limit(size).toArray();
-            }
-            else if (email) {
-                staffs = await staffsCollection.find({ email }).toArray();
+                const filter = {
+                    ...(search && {
+                        $or: [
+                            { displayName: { $regex: search, $options: 'i' } },
+                            { email: { $regex: search, $options: 'i' } },
+                            { contact: { $regex: search, $options: 'i' } }
+                        ]
+                    }),
+                    ...(email && { email: { $regex: email, $options: 'i' } }),
+                    ...(role && { role: { $regex: role, $options: 'i' } })
+                };
+                staffs = await staffsCollection.find(filter).skip(page * size).limit(size).toArray();
+                const staffsLimit = await staffsCollection.find(filter).toArray();
+                count = staffsLimit.length;
             }
             else {
-                staffs = await staffsCollection.find({}).toArray();
+                const filter = {
+                    ...(search && {
+                        $or: [
+                            { displayName: { $regex: search, $options: 'i' } },
+                            { email: { $regex: search, $options: 'i' } },
+                            { contact: { $regex: search, $options: 'i' } }
+                        ]
+                    }),
+                    ...(email && { email: { $regex: email, $options: 'i' } }),
+                    ...(role && { role: { $regex: role, $options: 'i' } })
+                };
+                staffs = await staffsCollection.find(filter).toArray();
+                count = staffs.length;
             }
-            const count = await staffsCollection.countDocuments();
-            res.json({
+
+            const totalCount = await staffsCollection.estimatedDocumentCount();
+
+            res.send({
+                totalCount,
                 count,
                 staffs,
             });
