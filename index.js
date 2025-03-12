@@ -184,6 +184,215 @@ async function run() {
 
 
 
+
+
+        /*---------------------------------------------------------
+        //                      Categories API.
+        ---------------------------------------------------------*/
+
+
+
+
+
+        // Get All Categories API.
+        app.get('/categories', async (req, res) => {
+            const page = req.query.page;
+            const size = parseInt(req.query.size);
+            const search = req.query.search;
+
+
+            let categories;
+            let count;
+
+            if (page) {
+                const filter = {
+                    ...(search && { parent: { $regex: search, $options: 'i' } })
+                };
+                categories = await categoriesCollection.find(filter).skip(page * size).limit(size).toArray();
+                const categoriesLimit = await categoriesCollection.find(filter).toArray();
+                count = categoriesLimit.length;
+            }
+            else {
+                const filter = {
+                    ...(search && { parent: { $regex: search, $options: 'i' } })
+                };
+                categories = await categoriesCollection.find(filter).toArray();
+                count = categories.length;
+            }
+
+            const totalCount = await categoriesCollection.estimatedDocumentCount();
+
+            res.send({
+                totalCount,
+                count,
+                categories,
+            });
+        });
+
+
+        // Get Specific Category.
+        app.get('/category/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await categoriesCollection.findOne(query);
+            res.send(result);
+        });
+
+
+        // Post New Categories API.
+        app.post('/add-new/category', async (req, res) => {
+            const category = req.body;
+            // console.log(category);
+            const result = await categoriesCollection.insertOne(category);
+            res.send(result);
+        });
+
+
+        // Update Category.
+        app.patch('/update/category/:id', async (req, res) => {
+            const id = req.params.id;
+            const category = req.body;
+
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    children: category.children,
+                    status: category.status,
+                    parent: category.parent,
+                    type: category.type,
+                    icon: category.icon,
+                    thumb: category.thumb ? category.thumb : null
+                }
+            };
+
+            const result = await categoriesCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
+
+
+        // Update Category Status.
+        app.patch('/update/category-status/:id', async (req, res) => {
+            const id = req.params.id;
+            const currentStatus = req.body;
+            if (currentStatus.status === "Show") {
+                currentStatus.status = "Hide";
+            } else {
+                currentStatus.status = "Show";
+            }
+
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    status: currentStatus.status
+                }
+            };
+
+            const result = await categoriesCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
+
+
+        // Delete Category.
+        app.delete('/category/delete/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await categoriesCollection.deleteOne(query);
+            res.send(result);
+        });
+
+
+
+
+
+        /*---------------------------------------------------------
+        //                  Customers/User API
+        ---------------------------------------------------------*/
+
+
+
+        // Get All Customers.
+        app.get('/customers', async (req, res) => {
+            const page = req.query.page;
+            const size = parseInt(req.query.size);
+            const search = req.query.search;
+
+            let customers;
+            let count;
+            if (page) {
+                const filter = {
+                    $or: [
+                        { displayName: { $regex: search, $options: 'i' } },
+                        { email: { $regex: search, $options: 'i' } },
+                        { phoneNumber: { $regex: search, $options: 'i' } }
+                    ]
+                };
+                customers = await customersCollection.find(filter).skip(page * size).limit(size).toArray();
+                const customersLimit = await customersCollection.find(filter).toArray();
+                count = customersLimit.length;
+            }
+            else {
+                const filter = {
+                    $or: [
+                        { displayName: { $regex: search, $options: 'i' } },
+                        { email: { $regex: search, $options: 'i' } },
+                        { phoneNumber: { $regex: search, $options: 'i' } }
+                    ]
+                };
+                customers = await customersCollection.find(filter).toArray();
+                count = customers.length;
+            }
+
+            const totalCount = await customersCollection.estimatedDocumentCount();
+
+            res.send({
+                totalCount,
+                count,
+                customers,
+            });
+        });
+
+
+        // Get Specific Product.
+        app.get('/customers/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await customersCollection.findOne(query);
+            res.send(result);
+        });
+
+
+        // Post New Users.
+        app.post('/add/customers', async (req, res) => {
+            const newData = req.body;
+            const result = await customersCollection.insertOne(newData);
+            res.json(result);
+        });
+
+
+        // Upsert Users.
+        app.put('/add/customers', async (req, res) => {
+            const user = req.body;
+            const filter = { email: user.email };
+            const options = { upsert: true };
+            const updateDoc = { $set: user };
+            const result = await customersCollection.updateOne(filter, updateDoc, options);
+            res.json(result);
+        });
+
+
+        // Delete customers.
+        app.delete('/customer/delete/:id', async (req, res) => {
+            const id = req.params.id;
+            console.log(id)
+            const query = { _id: new ObjectId(id) };
+            const result = await customersCollection.deleteOne(query);
+            res.send(result);
+        });
+
+
+
+
+
         /*---------------------------------------------------------
         //                      Orders API
         ---------------------------------------------------------*/
@@ -282,210 +491,6 @@ async function run() {
 
 
 
-        /*---------------------------------------------------------
-        //                  Customers/User API
-        ---------------------------------------------------------*/
-
-
-
-        // Get All Customers.
-        app.get('/customers', async (req, res) => {
-            const page = req.query.page;
-            const size = parseInt(req.query.size);
-            const search = req.query.search;
-
-            let customers;
-            let count;
-            if (page) {
-                const filter = {
-                    $or: [
-                        { displayName: { $regex: search, $options: 'i' } },
-                        { email: { $regex: search, $options: 'i' } },
-                        { phoneNumber: { $regex: search, $options: 'i' } }
-                    ]
-                };
-                customers = await customersCollection.find(filter).skip(page * size).limit(size).toArray();
-                const customersLimit = await customersCollection.find(filter).toArray();
-                count = customersLimit.length;
-            }
-            else {
-                const filter = {
-                    $or: [
-                        { displayName: { $regex: search, $options: 'i' } },
-                        { email: { $regex: search, $options: 'i' } },
-                        { phoneNumber: { $regex: search, $options: 'i' } }
-                    ]
-                };
-                customers = await customersCollection.find(filter).toArray();
-                count = customers.length;
-            }
-
-            const totalCount = await customersCollection.estimatedDocumentCount();
-
-            res.send({
-                totalCount,
-                count,
-                customers,
-            });
-        });
-
-
-        // Get Specific Product.
-        app.get('/customers/:id', async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) };
-            const result = await customersCollection.findOne(query);
-            res.send(result);
-        });
-
-
-        // Post New Users.
-        app.post('/add/customers', async (req, res) => {
-            const newData = req.body;
-            const result = await customersCollection.insertOne(newData);
-            res.json(result);
-        });
-
-
-        // Upsert Users.
-        app.put('/add/customers', async (req, res) => {
-            const user = req.body;
-            const filter = { email: user.email };
-            const options = { upsert: true };
-            const updateDoc = { $set: user };
-            const result = await customersCollection.updateOne(filter, updateDoc, options);
-            res.json(result);
-        });
-
-
-        // Delete customers.
-        app.delete('/customer/delete/:id', async (req, res) => {
-            const id = req.params.id;
-            console.log(id)
-            const query = { _id: new ObjectId(id) };
-            const result = await customersCollection.deleteOne(query);
-            res.send(result);
-        });
-
-
-
-
-
-        /*---------------------------------------------------------
-        //                      Categories API.
-        ---------------------------------------------------------*/
-
-
-
-
-
-        // Get All Categories API.
-        app.get('/categories', async (req, res) => {
-            const page = req.query.page;
-            const size = parseInt(req.query.size);
-            const search = req.query.search;
-            // const category = req.query.category;
-            let categories;
-            let count;
-
-            if (page && search) {
-                const filter = {
-                    parent: {
-                        $regex: search,
-                        $options: 'i'
-                    }
-                };
-                categories = await categoriesCollection.find(filter).skip(page * size).limit(size).toArray();
-                count = categories.length;
-            }
-            else if (page) {
-                categories = await categoriesCollection.find({}).skip(page * size).limit(size).toArray();
-                count = await categoriesCollection.estimatedDocumentCount();
-            }
-            else {
-                categories = await categoriesCollection.find({}).toArray();
-                count = categories.length;
-            }
-            const totalCount = await categoriesCollection.estimatedDocumentCount();
-            res.send({
-                totalCount,
-                count,
-                categories,
-            });
-        });
-
-
-        // Get Specific Category.
-        app.get('/category/:id', async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) };
-            const result = await categoriesCollection.findOne(query);
-            res.send(result);
-        });
-
-
-        // Post New Categories API.
-        app.post('/add-new/category', async (req, res) => {
-            const category = req.body;
-            // console.log(category);
-            const result = await categoriesCollection.insertOne(category);
-            res.send(result);
-        });
-
-
-        // Update Category.
-        app.patch('/update/category/:id', async (req, res) => {
-            const id = req.params.id;
-            const category = req.body;
-
-            const filter = { _id: new ObjectId(id) };
-            const updateDoc = {
-                $set: {
-                    children: category.children,
-                    status: category.status,
-                    parent: category.parent,
-                    type: category.type,
-                    icon: category.icon,
-                    thumb: category.thumb ? category.thumb : null
-                }
-            };
-
-            const result = await categoriesCollection.updateOne(filter, updateDoc);
-            res.send(result);
-        });
-
-
-        // Update Category Status.
-        app.patch('/update/category-status/:id', async (req, res) => {
-            const id = req.params.id;
-            const currentStatus = req.body;
-            if (currentStatus.status === "Show") {
-                currentStatus.status = "Hide";
-            } else {
-                currentStatus.status = "Show";
-            }
-
-            const filter = { _id: new ObjectId(id) };
-            const updateDoc = {
-                $set: {
-                    status: currentStatus.status
-                }
-            };
-
-            const result = await categoriesCollection.updateOne(filter, updateDoc);
-            res.send(result);
-        });
-
-
-        // Delete Category.
-        app.delete('/category/delete/:id', async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) };
-            const result = await categoriesCollection.deleteOne(query);
-            res.send(result);
-        });
-
-
 
         /*--------------------------------------------------------------
         //                      Coupons API.
@@ -497,17 +502,28 @@ async function run() {
         app.get('/coupons', async (req, res) => {
             const page = req.query.page;
             const size = parseInt(req.query.size);
+            const search = req.query.search;
             let coupons;
 
             if (page) {
-                coupons = await couponsCollection.find({}).skip(page * size).limit(size).toArray();
+                const filter = {
+                    $or: [
+                        { title: { $regex: search, $options: 'i' } },
+                        { couponCode: { $regex: search, $options: 'i' } }
+                    ]
+                };
+                coupons = await couponsCollection.find(filter).skip(page * size).limit(size).toArray();
+                const couponsLimit = await couponsCollection.find(filter).toArray();
+                count = couponsLimit.length;
             } else {
                 coupons = await couponsCollection.find({}).toArray();
+                count = coupons.length;
             }
 
-            const count = await couponsCollection.estimatedDocumentCount();
+            const totalCount = await couponsCollection.estimatedDocumentCount();
 
             res.send({
+                totalCount,
                 count,
                 coupons,
             });
@@ -567,9 +583,9 @@ async function run() {
 
 
 
-        /*-------------------------------
-                // Staffs API.
-        -------------------------------*/
+        /*---------------------------------------------------------------
+        //                          Staffs API.
+        ---------------------------------------------------------------*/
 
 
         // Get All Staffs.
@@ -643,6 +659,7 @@ async function run() {
             const result = await staffsCollection.updateOne(filter, updateDoc, options);
             res.json(result);
         });
+
     }
     finally {
         // await client.close();
