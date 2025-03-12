@@ -525,20 +525,10 @@ async function run() {
 
 
         // Post New Coupon.
-        app.post('/add-coupons', async (req, res) => {
+        app.post('/add-new/coupon', async (req, res) => {
             const coupon = req.body;
-            const ImageData = coupon.logo;
-            const discountPercentage = parseInt(coupon.discountPercentage);
-            const minimumAmount = parseInt(coupon.minimumAmount);
-            const encodedData = ImageData?.toString("base64");
-            const imageBuffer = Buffer.from(encodedData ? encodedData : "", "base64");
-            coupon.discountPercentage = discountPercentage;
-            coupon.minimumAmount = minimumAmount;
-            coupon.logo = imageBuffer;
-            coupon.createdAt = new Date().toISOString();
-            coupon.updatedAt = new Date().toISOString();
             const result = await couponsCollection.insertOne(coupon);
-            res.json(result);
+            res.send(result);
         });
 
 
