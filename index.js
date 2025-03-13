@@ -693,6 +693,15 @@ async function run() {
             res.send(result);
         });
 
+
+        // Delete Staff Information.
+        app.delete("/staff/delete/:id", async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await staffsCollection.deleteOne(query);
+            res.send(result);
+        });
+
     }
     finally {
         // await client.close();
