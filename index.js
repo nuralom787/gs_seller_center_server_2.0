@@ -640,15 +640,13 @@ async function run() {
         });
 
 
-
         // Get a Specific Staff.
         app.get('/staff', async (req, res) => {
             const email = req.query.email;
             const query = { email: email };
             const result = await staffsCollection.findOne(query);
-            res.json(result);
+            res.send(result);
         });
-
 
 
         // Check Staff Role.
@@ -665,28 +663,34 @@ async function run() {
 
 
         // Post New Staffs.
-        app.post('/add-staffs', async (req, res) => {
+        app.post('/add-new/staff', async (req, res) => {
             const staff = req.body;
-            const ImageData = staff.photoURL;
-            const encodedData = ImageData?.toString("base64");
-            const imageBuffer = Buffer.from(encodedData ? encodedData : "", "base64");
-            staff.photoURL = imageBuffer;
-            staff.createdAt = new Date().toISOString();
-            staff.updatedAt = new Date().toISOString();
             const result = await staffsCollection.insertOne(staff);
-            res.json(result);
+            res.send(result);
         });
 
 
         // Update Staff Profile Information.
-        app.put('/up-staff/:id', async (req, res) => {
+        app.patch('/update/staff/:id', async (req, res) => {
             const id = req.params.id;
             const data = req.body;
-            const filter = { _id: ObjectId(id) };
-            const options = { upsert: true };
-            const updateDoc = { $set: data };
-            const result = await staffsCollection.updateOne(filter, updateDoc, options);
-            res.json(result);
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    photoURL: data.photoURL,
+                    thumb: data.thumb,
+                    displayName: data.displayName,
+                    email: data.email,
+                    contact: data.contact,
+                    password: data.password,
+                    joiningDate: data.joiningDate,
+                    role: data.role,
+                    updatedAt: data.updatedAt
+                }
+            };
+
+            const result = await staffsCollection.updateOne(filter, updateDoc);
+            res.send(result);
         });
 
     }
