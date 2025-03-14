@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 require("dotenv").config();
+const jwt = require('jsonwebtoken');
+const cookieParser = require("cookie-parser");
 const { MongoClient, ObjectId } = require('mongodb');
 
 // Ports
@@ -9,7 +11,11 @@ const app = express();
 
 
 // Middleware.
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:5173'],
+    credentials: true
+}));
+app.use(cookieParser());
 app.use(express.json());
 
 
@@ -30,6 +36,55 @@ async function run() {
         const categoriesCollection = database.collection('categories');
         const couponsCollection = database.collection('coupons');
         const staffsCollection = database.collection('staffs');
+
+
+
+
+        // ----------------------------------------
+        //            Token Related API
+        // ----------------------------------------
+
+
+
+        // Create JWT Token.
+        app.post('/jwt', async (req, res) => {
+            const user = req.body;
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+            res.cookie('token', token, {
+                httpOnly: true,
+                secure: false
+            }).send({ success: true });
+        });
+
+
+        // Check Token Middleware.
+        const VerifyToken = (req, res, next) => {
+            // console.log(req.headers.authorization);
+            if (!req.headers.authorization) {
+                return res.status(401).send({ message: 'unauthorize access' });
+            }
+            const token = req.headers.authorization.split(' ')[1];
+            jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+                if (err) {
+                    return res.status(401).send({ message: 'unauthorize access' });
+                }
+                req.decoded = decoded;
+                next();
+            })
+        };
+
+
+        // Check User Admin Middleware.
+        const VerifyAdmin = async (req, res, next) => {
+            const email = req.decoded.email;
+            const query = { email: email };
+            const user = await UsersCollection.findOne(query);
+            const isAdmin = user?.role === 'admin';
+            if (!isAdmin) {
+                return res.status(403).send({ message: 'forbidden access' });
+            }
+            next();
+        };
 
 
 
