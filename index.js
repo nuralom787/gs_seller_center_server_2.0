@@ -12,7 +12,7 @@ const app = express();
 
 // Middleware.
 app.use(cors({
-    origin: ['http://localhost:5173'],
+    origin: ['http://localhost:5173', 'https://gs-dashboard-4864d.web.app', 'https://gs-dashboard-4864d.firebaseapp.com'],
     credentials: true
 }));
 app.use(cookieParser());
@@ -23,6 +23,12 @@ app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.zqb2d.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
+
+const cookieOptions = {
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === "production" ? 'none' : 'strict',
+    secure: process.env.NODE_ENV === "production" ? true : false,
+}
 
 
 // Server Code.
@@ -50,19 +56,13 @@ async function run() {
         app.post('/jwt', async (req, res) => {
             const user = req.body;
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
-            res.cookie('token', token, {
-                httpOnly: true,
-                secure: false
-            }).send({ success: true });
+            res.cookie('token', token, cookieOptions).send({ success: true });
         });
 
 
         // Clear Cookie After Logout.
         app.post("/logout", async (req, res) => {
-            res.clearCookie("token", {
-                httpOnly: true,
-                secure: false
-            }).send({ success: true })
+            res.clearCookie("token", cookieOptions).send({ success: true })
         });
 
 
