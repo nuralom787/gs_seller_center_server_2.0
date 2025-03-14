@@ -57,13 +57,22 @@ async function run() {
         });
 
 
+        // Clear Cookie After Logout.
+        app.post("/logout", async (req, res) => {
+            res.clearCookie("token", {
+                httpOnly: true,
+                secure: false
+            }).send({ success: true })
+        });
+
+
         // Check Token Middleware.
         const VerifyToken = (req, res, next) => {
             // console.log(req.headers.authorization);
-            if (!req.headers.authorization) {
+            if (!req.cookies.token) {
                 return res.status(401).send({ message: 'unauthorize access' });
             }
-            const token = req.headers.authorization.split(' ')[1];
+            const token = req.cookies.token;
             jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
                 if (err) {
                     return res.status(401).send({ message: 'unauthorize access' });
@@ -366,7 +375,7 @@ async function run() {
 
 
         // Get All Customers.
-        app.get('/customers', async (req, res) => {
+        app.get('/customers', VerifyToken, async (req, res) => {
             const page = req.query.page;
             const size = parseInt(req.query.size);
             const search = req.query.search;
