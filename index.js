@@ -27,7 +27,7 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 const cookieOptions = {
     httpOnly: true,
     sameSite: process.env.NODE_ENV === "production" ? 'none' : 'strict',
-    secure: process.env.NODE_ENV === "production" ? true : false,
+    secure: process.env.NODE_ENV === "production",
 }
 
 
@@ -55,6 +55,9 @@ async function run() {
         // Create JWT Token.
         app.post('/jwt', async (req, res) => {
             const user = req.body;
+            if (!user.email) {
+                return res.status(400).json({ error: "Email is required" })
+            };
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
             res.cookie('token', token, cookieOptions).send({ success: true });
         });
