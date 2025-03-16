@@ -11,12 +11,12 @@ const app = express();
 
 
 // Middleware.
+app.use(cookieParser());
+app.use(express.json());
 app.use(cors({
     origin: ['http://localhost:5173', 'https://gs-dashboard-4864d.web.app', 'https://gs-dashboard-4864d.firebaseapp.com'],
     credentials: true
 }));
-app.use(cookieParser());
-app.use(express.json());
 
 
 // MongoDB Server Code.
