@@ -4,6 +4,7 @@ require("dotenv").config();
 const jwt = require('jsonwebtoken');
 const cookieParser = require("cookie-parser");
 const { MongoClient, ObjectId } = require('mongodb');
+const argon2 = require("argon2")
 
 // Ports
 const port = process.env.PORT || 5000;
@@ -732,6 +733,8 @@ async function run() {
         // Post New Staffs.
         app.post('/add-new/staff', async (req, res) => {
             const staff = req.body;
+            const hashedPass = await argon2.hash(staff.password);
+            staff.password = hashedPass;
             const result = await staffsCollection.insertOne(staff);
             res.send(result);
         });
@@ -741,6 +744,8 @@ async function run() {
         app.patch('/update/staff/:id', async (req, res) => {
             const id = req.params.id;
             const data = req.body;
+            const hashedPass = await argon2.hash(data.password);
+            data.password = hashedPass;
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
                 $set: {
