@@ -14,22 +14,13 @@ const app = express();
 // Middleware.
 app.use(cookieParser());
 app.use(express.json());
-app.use(cors({
-    origin: ['http://localhost:5173', 'https://gs-dashboard-4864d.web.app', 'https://gs-dashboard-4864d.firebaseapp.com'],
-    credentials: true
-}));
+app.use(cors());
 
 
 // MongoDB Server Code.
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.zqb2d.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
-
-const cookieOptions = {
-    httpOnly: true,
-    sameSite: process.env.NODE_ENV === "production" ? 'none' : 'strict',
-    secure: process.env.NODE_ENV === "production",
-}
 
 
 // Server Code.
@@ -60,23 +51,17 @@ async function run() {
                 return res.status(400).json({ error: "Email is required" })
             };
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
-            res.cookie('token', token, cookieOptions).send({ success: true });
-        });
-
-
-        // Clear Cookie After Logout.
-        app.post("/logout", async (req, res) => {
-            res.clearCookie("token", cookieOptions).send({ success: true })
+            res.send({ token });
         });
 
 
         // Check Token Middleware.
         const VerifyToken = (req, res, next) => {
             // console.log(req.headers.authorization);
-            if (!req.cookies.token) {
-                return res.status(401).send({ message: 'unauthorize access' });
+            if (!req.headers.authorization) {
+                return res.status(401).send({ status: 401, message: 'unauthorize access' });
             }
-            const token = req.cookies.token;
+            const token = req.headers.authorization.split(" ")[1];
             jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
                 if (err) {
                     return res.status(401).send({ message: 'unauthorize access' });
@@ -468,7 +453,7 @@ async function run() {
 
 
         // Get All Orders.
-        app.get('/orders', async (req, res) => {
+        app.get('/orders', VerifyToken, async (req, res) => {
             const page = req.query.page;
             const size = parseInt(req.query.size);
             const email = req.query.email;
@@ -657,7 +642,7 @@ async function run() {
 
 
         // Get All Staffs.
-        app.get('/staffs', async (req, res) => {
+        app.get('/staffs', VerifyToken, async (req, res) => {
             const page = req.query.page;
             const size = parseInt(req.query.size);
             const email = req.query.email;
