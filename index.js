@@ -1,10 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 require("dotenv").config();
+const moment = require("moment");
 const jwt = require('jsonwebtoken');
 const cookieParser = require("cookie-parser");
 const { MongoClient, ObjectId } = require('mongodb');
-const argon2 = require("argon2")
+const argon2 = require("argon2");
 
 // Ports
 const port = process.env.PORT || 5000;
@@ -83,6 +84,94 @@ async function run() {
             }
             next();
         };
+
+
+
+
+        // -----------------------------------------------------------
+        //                      Dashboard Stats
+        // -----------------------------------------------------------
+
+
+
+
+        app.get("/dashboard/order-stats", async (req, res) => {
+
+            // Get today's start and end time
+            const todayStart = moment().startOf("day").toDate();
+            const todayEnd = moment().endOf("day").toDate();
+
+            // Get yesterday's start and end time
+            const yesterdayStart = moment().subtract(1, "days").startOf("day").toDate();
+            const yesterdayEnd = moment().subtract(1, "days").endOf("day").toDate();
+
+            // Get first day and last day of current month
+            const monthStart = moment().startOf("month").toDate();
+            const monthEnd = moment().endOf("month").toDate();
+
+            // Get last month's start and end time
+            const lastMonthStart = moment().subtract(1, "months").startOf("month").toDate();
+            const lastMonthEnd = moment().subtract(1, "months").endOf("month").toDate();
+
+            // Aggregate for today's revenue
+            const todayRevenue = await ordersCollection.aggregate([
+                { $match: { orderTime: { $gte: todayStart, $lte: todayEnd } } },
+                { $group: { _id: null, total: { $sum: "$grandTotal" } } }
+            ]).toArray();
+
+            // Aggregate for yesterday's revenue
+            const yesterdayRevenue = await ordersCollection.aggregate([
+                { $match: { orderTime: { $gte: yesterdayStart, $lte: yesterdayEnd } } },
+                { $group: { _id: null, total: { $sum: "$grandTotal" } } }
+            ]).toArray();
+
+            // Aggregate for method's revenue
+            const methodRevenue = await ordersCollection.aggregate([
+                { $group: { _id: "$paymentMethod.type", totalAmount: { $sum: "$grandTotal" } } }
+            ]).toArray();
+
+            // Aggregate for this month's revenue
+            const thisMonthRevenue = await ordersCollection.aggregate([
+                { $match: { orderTime: { $gte: monthStart, $lte: monthEnd } } },
+                { $group: { _id: null, total: { $sum: "$grandTotal" } } }
+            ]).toArray();
+
+            // Aggregate for last month's revenue
+            const lastMonthRevenue = await ordersCollection.aggregate([
+                { $match: { orderTime: { $gte: lastMonthStart, $lte: lastMonthEnd } } },
+                { $group: { _id: null, total: { $sum: "$grandTotal" } } }
+            ]).toArray();
+
+            // Aggregate for all-time revenue
+            const allTimeRevenue = await ordersCollection.aggregate([
+                { $group: { _id: null, total: { $sum: "$grandTotal" } } }
+            ]).toArray();
+
+
+            // Get Total and status wise orders.
+            const totalOrders = (await ordersCollection.find().toArray()).length;
+            const pendingOrders = (await ordersCollection.find({ status: "Pending" }).toArray()).length;
+            const processingOrders = (await ordersCollection.find({ status: "Processing" }).toArray()).length;
+            const deliveredOrders = (await ordersCollection.find({ status: "Delivered" }).toArray()).length;
+            const cancelOrders = (await ordersCollection.find({ status: "Cancel" }).toArray()).length;
+
+
+            res.send({
+                todayRevenue: todayRevenue.length > 0 ? todayRevenue[0].total : 0,
+                yesterdayRevenue: yesterdayRevenue.length > 0 ? yesterdayRevenue[0].total : 0,
+                methodRevenue,
+                thisMonthRevenue: thisMonthRevenue.length > 0 ? thisMonthRevenue[0].total : 0,
+                lastMonthRevenue: lastMonthRevenue.length > 0 ? lastMonthRevenue[0].total : 0,
+                allTimeRevenue: allTimeRevenue.length > 0 ? allTimeRevenue[0].total : 0,
+                totalOrders,
+                pendingOrders,
+                processingOrders,
+                deliveredOrders,
+                cancelOrders
+            });
+        });
+
+
 
 
 
@@ -453,7 +542,7 @@ async function run() {
 
 
         // Get All Orders.
-        app.get('/orders', VerifyToken, async (req, res) => {
+        app.get('/orders', async (req, res) => {
             const page = req.query.page;
             const size = parseInt(req.query.size);
             const email = req.query.email;
