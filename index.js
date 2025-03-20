@@ -127,7 +127,14 @@ async function run() {
 
             // Aggregate for method's revenue
             const methodRevenue = await ordersCollection.aggregate([
-                { $group: { _id: "$paymentMethod.type", totalAmount: { $sum: "$grandTotal" } } }
+                { $group: { _id: "$paymentMethod.type", totalAmount: { $sum: "$grandTotal" } } },
+                {
+                    $project: {
+                        _id: 0,
+                        name: "$_id",
+                        totalAmount: "$totalAmount"
+                    }
+                }
             ]).toArray();
 
             // Aggregate for this month's revenue
@@ -150,11 +157,18 @@ async function run() {
 
             // Get Total and status wise orders.
             const totalOrders = (await ordersCollection.find().toArray()).length;
-            const pendingOrders = (await ordersCollection.find({ status: "Pending" }).toArray()).length;
-            const processingOrders = (await ordersCollection.find({ status: "Processing" }).toArray()).length;
-            const deliveredOrders = (await ordersCollection.find({ status: "Delivered" }).toArray()).length;
-            const cancelOrders = (await ordersCollection.find({ status: "Cancel" }).toArray()).length;
 
+            // 
+            const statusCounts = await ordersCollection.aggregate([
+                { $group: { _id: "$status", count: { $sum: 1 } } },
+                {
+                    $project: {
+                        _id: 0,
+                        status: "$_id",
+                        count: "$count"
+                    }
+                }
+            ]).toArray();
 
             res.send({
                 todayRevenue: todayRevenue.length > 0 ? todayRevenue[0].total : 0,
@@ -164,10 +178,7 @@ async function run() {
                 lastMonthRevenue: lastMonthRevenue.length > 0 ? lastMonthRevenue[0].total : 0,
                 allTimeRevenue: allTimeRevenue.length > 0 ? allTimeRevenue[0].total : 0,
                 totalOrders,
-                pendingOrders,
-                processingOrders,
-                deliveredOrders,
-                cancelOrders
+                statusCounts
             });
         });
 
