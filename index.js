@@ -127,7 +127,7 @@ async function run() {
 
             // Aggregate for method's revenue
             const methodRevenue = await ordersCollection.aggregate([
-                { $group: { _id: "$paymentMethod.type", totalAmount: { $sum: "$grandTotal" } } },
+                { $group: { _id: "$paymentMethod", totalAmount: { $sum: "$total" } } },
                 {
                     $project: {
                         _id: 0,
